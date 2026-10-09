@@ -53,13 +53,16 @@ func TestProductionCatalogCompleteAndFormatCompatible(t *testing.T) {
 		if key == "test.hello" {
 			continue
 		} // Intentional missing-Korean fixture in TestCatalogFallback.
-		if values[En] == "" || values[Ko] == "" {
+		if values[En] == "" || values[Ko] == "" || values[Zh] == "" {
 			t.Errorf("missing production translation for %q", key)
 			continue
 		}
 		en, ko := strings.Join(formatArguments(values[En]), ","), strings.Join(formatArguments(values[Ko]), ",")
 		if en != ko {
 			t.Errorf("format arguments differ for %q: English %s; Korean %s", key, en, ko)
+		}
+		if zh := strings.Join(formatArguments(values[Zh]), ","); en != zh {
+			t.Errorf("format arguments differ for %q: English %s; Chinese %s", key, en, zh)
 		}
 	}
 }

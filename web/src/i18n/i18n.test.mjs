@@ -22,7 +22,7 @@ function reset() { delete globalThis.window; delete globalThis.document; __reset
 test("English is the default; unsupported and malformed preferences safely fall back", () => {
   reset(); assert.equal(getLocale(), "en");
   assert.equal(normalizeLocale("ko-KR"), "ko");
-  assert.equal(normalizeLocale("zh-CN"), null);
+  assert.equal(normalizeLocale("zh-CN"), "zh");
   assert.equal(readCookieLocale("scopeweaver_locale=%E0%A4%A"), null);
   browser("unsupported", "scopeweaver_locale=ko"); initializeLocale(); assert.equal(getLocale(), "ko");
   reset(); browser("unsupported", "scopeweaver_locale=%bad"); initializeLocale(); assert.equal(getLocale(), "en"); reset();
@@ -41,12 +41,16 @@ test("persisted Korean starts with the English hydration snapshot and initialize
 
 test("both catalogs are complete and preserve interpolation fields", () => {
   assert.deepEqual(Object.keys(catalogs.en).sort(), Object.keys(catalogs.ko).sort());
+  assert.deepEqual(Object.keys(catalogs.en).sort(), Object.keys(catalogs.zh).sort());
   assert.ok(Object.keys(catalogs.en).length >= 3000);
   for(const key of Object.keys(catalogs.en)) {
     assert.ok(catalogs.en[key].length, key); assert.ok(catalogs.ko[key].length,key);
     assert.deepEqual(placeholders(catalogs.en[key]), placeholders(catalogs.ko[key]),key);
     assert.doesNotMatch(catalogs.en[key], /Untranslated|미번역|\p{Script=Han}/u,key);
     assert.doesNotMatch(catalogs.ko[key], /Untranslated|미번역|\p{Script=Han}/u,key);
+    assert.ok(catalogs.zh[key].length,key);
+    assert.deepEqual(placeholders(catalogs.en[key]), placeholders(catalogs.zh[key]),key);
+    assert.doesNotMatch(catalogs.zh[key], /Untranslated|미번역|未翻译/u,key);
   }
   assert.equal(interpolate("Task {id}: {name}",{id:7,name:"사용자 原文 {unchanged}"}),"Task 7: 사용자 原文 {unchanged}");
   assert.equal(interpolate("{missing}",{}),"{missing}");
@@ -95,11 +99,13 @@ test("authored UI contains no untranslated Han literals; legacy parsers are expl
   for(const file of sourceFiles()) {
     const rel=path.relative(SRC_ROOT,file);
     if(rel.endsWith(".test.mjs"))continue; // Tests intentionally preserve multilingual user input.
+    if(rel.startsWith("i18n/messages/"))continue; // Authored message catalogs hold the zh/ko translations.
     for(const hit of scanFile(file)) {
       if(rel==="lib/chat-mentions.ts" && legacyWire.has(hit.text))continue;
       if(rel==="components/approval-records.tsx" && hit.text==="/^\\[(?:模型|Model|모델)\\]\\s*/")continue;
       if(rel==="components/transcript.tsx" && hit.text==="/(?:工具|Tool|도구)\\s+(\\S+)\\s+(?:请求|requests?|요청)/i")continue;
       if(rel==="lib/company-scope.ts" && hit.text==="/icp|备案/i")continue;
+      if(rel==="i18n/config.ts" && hit.text==="简体中文")continue; // Native language name.
       failures.push(`${rel}:${hit.line} ${hit.text}`);
     }
   }
@@ -125,6 +131,7 @@ test("dashboard count and token phrases preserve natural English and Korean spac
 test("rich settings paragraphs preserve emphasis and translated theme announcements", () => {
   for (const key of Object.keys(catalogs.en).filter(key => key.startsWith("settings."))) {
     assert.deepEqual(tags(catalogs.en[key]), tags(catalogs.ko[key]), key);
+    assert.deepEqual(tags(catalogs.en[key]), tags(catalogs.zh[key]), key);
   }
   assert.equal(translateIn("ko", "app.cycleTheme", { theme: "밝게" }), "현재 테마: 밝게. 클릭하여 테마 변경");
   assert.equal(translateIn("en", "settings.pagination", { from: 1, to: 4, total: 4 }), "1–4 / 4 records");

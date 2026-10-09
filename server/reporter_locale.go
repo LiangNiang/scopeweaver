@@ -14,7 +14,7 @@ func init() {
 // their historical stock versions. Operator-authored trigger content is preserved.
 func reporterTriggerText(text string, lang locale.Lang) string {
 	digest := sha256.Sum256([]byte(text))
-	if text == reporterToolCallMessage || text == locale.Text(locale.Ko, reporterToolCallMessage) || isLegacyReporterTrigger(text) || hex.EncodeToString(digest[:]) == "2b766affdba89c92772698367e41fc6d570ee25f29964576c0aec96da4d176e6" {
+	if text == reporterToolCallMessage || text == locale.Text(locale.Ko, reporterToolCallMessage) || text == locale.Text(locale.Zh, reporterToolCallMessage) || isLegacyReporterTrigger(text) || hex.EncodeToString(digest[:]) == "2b766affdba89c92772698367e41fc6d570ee25f29964576c0aec96da4d176e6" {
 		return locale.Text(lang, reporterToolCallMessage)
 	}
 	return text
