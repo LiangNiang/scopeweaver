@@ -12,31 +12,53 @@ import (
 
 var builtinTranslations struct {
 	sync.Once
-	entries map[string][2]actool.CoreTool
+	entries map[string]ToolLanguageSet
+}
+
+// ToolLanguages lists the bundled tool metadata languages, index-aligned with ToolLanguageSet.
+var ToolLanguages = [...]locale.Lang{locale.En, locale.Ko, locale.Zh}
+
+// ToolLanguageSet holds one metadata shell per entry of ToolLanguages.
+type ToolLanguageSet = [len(ToolLanguages)]actool.CoreTool
+
+// TranslateToolLanguages renders current in lang by matching exact stock metadata
+// from any other bundled language. Unmatched or customized fields are preserved.
+func TranslateToolLanguages(current actool.CoreTool, set ToolLanguageSet, lang locale.Lang) actool.CoreTool {
+	target := 0
+	for i, l := range ToolLanguages {
+		if l == lang {
+			target = i
+		}
+	}
+	if set[target] == nil {
+		return current
+	}
+	out := current
+	for i, source := range set {
+		if i != target && source != nil {
+			out = TranslateToolMetadata(out, source, set[target])
+		}
+	}
+	return out
 }
 
 // localizeBuiltinTools translates only matching bundled defaults, including exact
 // historical stock metadata. Edited prose/defaults and tool behavior are preserved.
 func localizeBuiltinTools(tools []actool.CoreTool, lang locale.Lang) []actool.CoreTool {
 	builtinTranslations.Do(func() {
-		builtinTranslations.entries = map[string][2]actool.CoreTool{}
-		for _, t := range NewToolSet(nil, "", locale.En).AllDomainTools() {
-			builtinTranslations.entries[t.Name()] = [2]actool.CoreTool{t, nil}
-		}
-		for _, t := range NewToolSet(nil, "", locale.Ko).AllDomainTools() {
-			p := builtinTranslations.entries[t.Name()]
-			p[1] = t
-			builtinTranslations.entries[t.Name()] = p
+		builtinTranslations.entries = map[string]ToolLanguageSet{}
+		for index, l := range ToolLanguages {
+			for _, t := range NewToolSet(nil, "", l).AllDomainTools() {
+				set := builtinTranslations.entries[t.Name()]
+				set[index] = t
+				builtinTranslations.entries[t.Name()] = set
+			}
 		}
 	})
 	out := append([]actool.CoreTool(nil), tools...)
 	for i, t := range out {
-		if p, ok := builtinTranslations.entries[t.Name()]; ok && p[0] != nil && p[1] != nil {
-			if lang == locale.Ko {
-				out[i] = TranslateToolMetadata(t, p[0], p[1])
-			} else {
-				out[i] = TranslateToolMetadata(t, p[1], p[0])
-			}
+		if set, ok := builtinTranslations.entries[t.Name()]; ok {
+			out[i] = TranslateToolLanguages(t, set, lang)
 		}
 	}
 	return out

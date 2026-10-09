@@ -14,7 +14,7 @@ var catalog = map[string]map[Lang]string{}
 // Register adds (or overrides) catalog entries for a message key. Packages call
 // this from init() so their domain strings live next to the code that uses them
 // while the negotiation/formatting logic stays here. En is required.
-func Register(key string, en, ko string) {
+func Register(key string, en, ko string, zh ...string) {
 	m := catalog[key]
 	if m == nil {
 		m = map[Lang]string{}
@@ -24,12 +24,37 @@ func Register(key string, en, ko string) {
 	if ko != "" {
 		m[Ko] = ko
 	}
+	if len(zh) > 0 && zh[0] != "" {
+		m[Zh] = zh[0]
+	} else if pending, ok := zhPending[key]; ok {
+		m[Zh] = pending
+		delete(zhPending, key)
+	}
+}
+
+// zhPending holds Chinese text whose key has not been registered yet, so
+// RegisterZh never makes Has report a key that lacks English text.
+var zhPending = map[string]string{}
+
+// RegisterZh adds Simplified Chinese text for keys registered by Register,
+// regardless of which init runs first.
+func RegisterZh(entries map[string]string) {
+	for key, zh := range entries {
+		if zh == "" {
+			continue
+		}
+		if m := catalog[key]; m != nil {
+			m[Zh] = zh
+		} else {
+			zhPending[key] = zh
+		}
+	}
 }
 
 // RegisterAll bulk-registers entries: entries[key] = {En: ..., Ko: ...}.
 func RegisterAll(entries map[string]map[Lang]string) {
 	for key, langs := range entries {
-		Register(key, langs[En], langs[Ko])
+		Register(key, langs[En], langs[Ko], langs[Zh])
 	}
 }
 

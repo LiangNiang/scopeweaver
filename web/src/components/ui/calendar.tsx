@@ -1,7 +1,7 @@
 "use client"
 
 import { useI18n } from "@/i18n";
-import { enUS, ko } from "date-fns/locale";
+import { enUS, ko, zhCN } from "date-fns/locale";
 import * as React from "react"
 import {
   DayPicker,
@@ -29,7 +29,7 @@ function Calendar({
 }) {
 
   const { locale: selectedLocale } = useI18n();
-  const locale = suppliedLocale ?? (selectedLocale === "ko" ? ko : enUS);
+  const locale = suppliedLocale ?? (selectedLocale === "ko" ? ko : selectedLocale === "zh" ? zhCN : enUS);
   const defaultClassNames = getDefaultClassNames()
 
   return (

@@ -11,9 +11,9 @@ import (
 
 // knownToolLanguages constructs metadata-only tool shells. No handlers, database
 // operations, provider calls, or filesystem actions are executed by constructors.
-func (s *Server) knownToolLanguages() map[string][2]actool.CoreTool {
-	pairs := map[string][2]actool.CoreTool{}
-	for index, lang := range []locale.Lang{locale.En, locale.Ko} {
+func (s *Server) knownToolLanguages() map[string]agent.ToolLanguageSet {
+	pairs := map[string]agent.ToolLanguageSet{}
+	for index, lang := range agent.ToolLanguages {
 		tools := agent.NewToolSet(nil, "", lang).AllDomainTools()
 		tools = append(tools, (&traffic.Traffic{}).Tools(lang)...)
 		tools = append(tools, s.orchestrationTools(lang)...)
@@ -28,22 +28,16 @@ func (s *Server) knownToolLanguages() map[string][2]actool.CoreTool {
 	return pairs
 }
 
-func translatedToolMetadata(tool actool.CoreTool, pair [2]actool.CoreTool, lang locale.Lang) actool.CoreTool {
-	if pair[0] == nil || pair[1] == nil {
-		return tool
-	}
-	if lang == locale.Ko {
-		return agent.TranslateToolMetadata(tool, pair[0], pair[1])
-	}
-	return agent.TranslateToolMetadata(tool, pair[1], pair[0])
+func translatedToolMetadata(tool actool.CoreTool, pair agent.ToolLanguageSet, lang locale.Lang) actool.CoreTool {
+	return agent.TranslateToolLanguages(tool, pair, lang)
 }
 
 // translatedStoredTool returns a display/save copy of a system tool. Exact stock
 // descriptions can change language; custom fields and all executable data remain.
-func translatedStoredTool(row *db.Tool, pairs map[string][2]actool.CoreTool, lang locale.Lang) *db.Tool {
+func translatedStoredTool(row *db.Tool, pairs map[string]agent.ToolLanguageSet, lang locale.Lang) *db.Tool {
 	copy := *row
 	pair, known := pairs[row.Key]
-	if !row.System || !known || pair[0] == nil || pair[1] == nil {
+	if !row.System || !known || pair[0] == nil {
 		return &copy
 	}
 	var schema map[string]any
