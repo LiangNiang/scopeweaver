@@ -288,7 +288,7 @@ export const zh: Record<keyof typeof en, string> = {
   e079: "主机",
   e082: "Agent",
   e084: "技能",
-  e085: "密钥",
+  e085: "标识符",
   e089: "低",
   e090: "中",
   e091: "高",
